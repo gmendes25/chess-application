@@ -19,4 +19,5 @@ public class Piece {
         this.board = board;
     }
     //#endregion
+    
 }
