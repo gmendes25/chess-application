@@ -1,5 +1,9 @@
 package application.chess;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.stream.Collectors;
+
 import application.boardgame.Board;
 import application.boardgame.BoardException;
 import application.boardgame.Piece;
@@ -9,12 +13,37 @@ import application.chess.chesspieces.Rook;
 
 public class ChessMatch {
     //#region Attributes
+    private int turn;
+
+    private Color playerColor;
+
     private Board board;
+
+    private boolean check;
+
+    private List<Piece> piecesOnTheBoard = new ArrayList<>();
+    
+    private List<Piece> capturedPieces = new ArrayList<>();
     //#endregion
+
+    public int getTurn(){
+        return turn;
+    }
+
+    public Color getPlayerColor(){
+        return playerColor;
+    }
+
+    public boolean getCheck(){
+        return check;
+    }
 
     //#region inicializador de partida
     public ChessMatch(){
         board = new Board(8,8);
+        turn = 1;
+        playerColor = Color.WHITE;
+        check = false;
         initialSetup();
     }
     //#endregion
@@ -42,6 +71,33 @@ public class ChessMatch {
      */
     private void placeNewPiece(char column, int row, ChessPiece piece){
         board.placePiece(piece, new ChessPosition(column, row).toPosition());
+        piecesOnTheBoard.add(piece);
+    }
+
+    private Color opponent(Color color){
+        return (color == Color.WHITE) ? Color.BLACK : Color.WHITE;
+    }
+
+    private ChessPiece king(Color color){
+        List<Piece> list = piecesOnTheBoard.stream().filter(x -> ((ChessPiece) x).getColor() == color).collect(Collectors.toList());
+        for(Piece p : list){
+            if (p instanceof King){
+                return (ChessPiece)p;
+            }
+        }
+        throw new IllegalStateException("There is no " + color + " king on the board.");
+    }
+
+    private boolean testCheck(Color color){
+        Position kingPosition = king(color).getChessPosition().toPosition();
+        List<Piece> opponentPieces = piecesOnTheBoard.stream().filter(x -> ((ChessPiece) x).getColor() == opponent(color)).collect(Collectors.toList());
+        for (Piece p : opponentPieces){
+            boolean[][] mat = p.possibleMoves();
+            if (mat[kingPosition.getRow()][kingPosition.getColumn()]){
+                return true;
+            }
+        }
+        return false;
     }
 
     /**
@@ -61,6 +117,15 @@ public class ChessMatch {
         validateSourcePosition(source);
         validateTargetPosition(source, target);
         Piece capturedPiece = makeMove(source, target);
+
+        if (testCheck(playerColor)){
+            undoMove(source, target, capturedPiece);
+            throw new ChessException("You can't put yourself in check");
+        }
+
+        check = (testCheck(opponent(playerColor))) ? true : false;
+
+        nextTurn();
         return (ChessPiece) capturedPiece;
     }
 
@@ -74,7 +139,21 @@ public class ChessMatch {
         Piece p = board.removePiece(source);
         Piece capturedPiece = board.removePiece(target);
         board.placePiece(p, target);
+        if(capturedPiece != null){
+            piecesOnTheBoard.remove(capturedPiece);
+            capturedPieces.add(capturedPiece);
+        }
         return capturedPiece;
+    }
+
+    private void undoMove(Position source, Position target, Piece capturedPiece){
+        Piece p = board.removePiece(target);
+        board.placePiece(p, source);
+        if(capturedPiece != null){
+            board.placePiece(capturedPiece, target);
+            piecesOnTheBoard.add(capturedPiece);
+            capturedPieces.remove(capturedPiece);
+        }
     }
 
     /**
@@ -84,6 +163,9 @@ public class ChessMatch {
     private void validateSourcePosition(Position position){
         if(!board.thereIsAPiece(position)){
             throw new BoardException("There is no piece on source position.");
+        }
+        if(playerColor!= ((ChessPiece) board.piece(position)).getColor()){
+            throw new ChessException("The chosen piece is not yours.");
         }
         if(!board.piece(position).isThereAnyPossibleMove()){
             throw new ChessException("There is no possible moves for the chosen piece.");
@@ -96,6 +178,11 @@ public class ChessMatch {
         }
     }
     
+    private void nextTurn(){
+        turn++;
+        playerColor = (playerColor == Color.WHITE) ? Color.BLACK : Color.WHITE;
+    }
+
     //#region Posicionar peças
     /**
      * Metodo para colocar as peças na posição inicial de uma partida de xadrez

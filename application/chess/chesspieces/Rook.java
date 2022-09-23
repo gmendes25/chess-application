@@ -11,11 +11,18 @@ public class Rook extends ChessPiece{
         super(board, color);
     }
 
+    //#region toString
     @Override
     public String toString() {
         return "R";
     }
+    //#endregion
 
+    //#region Movimentação da peça
+
+    /**
+     * Possiveis movimentos para a torre.
+     */
     @Override
     public boolean[][] possibleMoves() {
         boolean[][] mat = new boolean[getBoard().getRows()][getBoard().getColumns()];
@@ -64,5 +71,5 @@ public class Rook extends ChessPiece{
 
         return mat;
     }
-    
+    //#endregion
 }

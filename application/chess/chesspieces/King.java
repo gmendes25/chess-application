@@ -11,16 +11,23 @@ public class King extends ChessPiece{
         super(board, color);
     }
 
+    //#region toString
     @Override
     public String toString() {
         return "K";
     }
+    //#endregion
+
+    //#region Movimentação da peça
 
     private boolean canMove(Position position){
         ChessPiece p = (ChessPiece) getBoard().piece(position);
         return p == null || p.getColor() != getColor();
     }
 
+    /**
+     * Movimentos possiveis para o rei.
+     */
     @Override
     public boolean[][] possibleMoves() {
         boolean[][] mat = new boolean[getBoard().getRows()][getBoard().getColumns()];
@@ -75,5 +82,5 @@ public class King extends ChessPiece{
 
         return mat;
     }
-    
+    //#endregion
 }
