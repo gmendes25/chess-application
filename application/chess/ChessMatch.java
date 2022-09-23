@@ -21,11 +21,14 @@ public class ChessMatch {
 
     private boolean check;
 
+    private boolean checkMate;
+
     private List<Piece> piecesOnTheBoard = new ArrayList<>();
     
     private List<Piece> capturedPieces = new ArrayList<>();
     //#endregion
 
+    //#region Getters and Setters
     public int getTurn(){
         return turn;
     }
@@ -38,7 +41,13 @@ public class ChessMatch {
         return check;
     }
 
+    public boolean getCheckMate(){
+        return checkMate;
+    }
+    //#endregion
+
     //#region inicializador de partida
+
     public ChessMatch(){
         board = new Board(8,8);
         turn = 1;
@@ -63,6 +72,7 @@ public class ChessMatch {
         return mat;
     }
     //#endregion
+    
     /**
      * Utilizado para posicionar uma peça.
      * @param column Coluna em que a peça será posicionada.
@@ -88,6 +98,12 @@ public class ChessMatch {
         throw new IllegalStateException("There is no " + color + " king on the board.");
     }
 
+    //#region Logica de Mate
+    /**
+     * Metodo que testa se o jogador está em check.
+     * @param color Cor do jogador que será testado.
+     * @return Retorna verdadeiro em caso de check.
+     */
     private boolean testCheck(Color color){
         Position kingPosition = king(color).getChessPosition().toPosition();
         List<Piece> opponentPieces = piecesOnTheBoard.stream().filter(x -> ((ChessPiece) x).getColor() == opponent(color)).collect(Collectors.toList());
@@ -100,6 +116,39 @@ public class ChessMatch {
         return false;
     }
 
+    /**
+     * Metodo para avaliar as jogadas possiveis e informar se o jogador está em checkmate ou não.
+     * @param color Cor do jogador que será testado.
+     * @return Retorna verdadeiro em caso de checkmate.
+     */
+    private boolean testCheckMate(Color color){
+        if(!testCheck(color)){
+            return false;
+        }
+
+        List<Piece> list = piecesOnTheBoard.stream().filter(x -> ((ChessPiece) x).getColor() == color).collect(Collectors.toList());
+        for (Piece p : list){
+            boolean[][] mat = p.possibleMoves();
+            for(int i =0; i<board.getRows();i++){
+                for(int j = 0; j<board.getColumns();j++){
+                    if(mat[i][j]){
+                        Position source = ((ChessPiece)p).getChessPosition().toPosition();
+                        Position target = new Position(i, j);
+                        Piece capturedPiece = makeMove(source, target);
+                        boolean testCheck = testCheck(color);
+                        undoMove(source, target, capturedPiece);
+                        if(!testCheck){
+                            return false;
+                        }
+                    }
+                }
+            }
+        }
+        return true;
+    }
+    //#endregion
+
+    //#region Movimentação das peças
     /**
      * Para imprimir as possiveis posições
      * @param sourcePosition Posição de origem
@@ -125,7 +174,12 @@ public class ChessMatch {
 
         check = (testCheck(opponent(playerColor))) ? true : false;
 
-        nextTurn();
+        if(testCheckMate(opponent(playerColor))){
+            checkMate = true;
+        }else{
+            nextTurn();
+        }
+
         return (ChessPiece) capturedPiece;
     }
 
@@ -155,7 +209,9 @@ public class ChessMatch {
             capturedPieces.remove(capturedPiece);
         }
     }
+    //#endregion
 
+    //#region Validação de posicionamento
     /**
      * Utilizado para fazer a validação da posição, identificando se a peça está na posição selecionada.
      * @param position Posição que será validada.
@@ -182,6 +238,7 @@ public class ChessMatch {
         turn++;
         playerColor = (playerColor == Color.WHITE) ? Color.BLACK : Color.WHITE;
     }
+    //#endregion
 
     //#region Posicionar peças
     /**
